@@ -2,70 +2,134 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AccessMove | Upcoming Outings</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 24px 16px;
-      font-family: Arial, sans-serif;
-      color: #263746;
-      background: #f5f8fa;
-      line-height: 1.6;
-    }
-    .container { max-width: 850px; margin: auto; }
-    header { text-align: center; margin-bottom: 28px; }
-    h1 { color: #174b59; margin-bottom: 6px; }
-    .intro { color: #526675; }
-    h2 { color: #174b59; }
-    .outing {
-      background: white;
-      border: 1px solid #dce5e9;
-      border-radius: 12px;
-      padding: 22px;
-      margin: 18px 0;
-    }
-    .outing h3 { color: #174b59; margin-top: 0; }
-    .details { margin: 12px 0; }
-    .request {
-      display: inline-block;
-      background: #176477;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 7px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .request:hover, .request:focus {
-      background: #104b5a;
-      text-decoration: underline;
-    }
-    .note { font-size: 0.92rem; color: #526675; }
-    footer { text-align: center; margin-top: 32px; font-size: 0.9rem; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AccessMove | Upcoming Outings</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px 16px;
+  font-family: Arial, sans-serif;
+  color: #263746; background: #f5f8fa; line-height: 1.6;
+}
+.container { max-width: 850px; margin: auto; }
+header, footer { text-align: center; }
+h1, h2, .outing h3 { color: #174b59; }
+.intro, .note { color: #526675; }
+.outing {
+  background: white; border: 1px solid #dce5e9;
+  border-radius: 12px; padding: 22px; margin: 18px 0;
+}
+.outing h3 { margin-top: 0; }
+.request {
+  display: inline-block; background: #176477; color: white;
+  padding: 12px 20px; border-radius: 7px;
+  text-decoration: none; font-weight: bold;
+}
+.request:hover, .request:focus {
+  background: #104b5a; text-decoration: underline;
+}
+.note { font-size: .92rem; }
+</style>
 </head>
 <body>
-  <main class="container">
-    <header>
-      <h1>AccessMove</h1>
-      <p class="intro">Accessible outings, friendly companionship and enjoyable days out.</p>
-    </header>
+<main class="container">
+<header>
+  <h1>AccessMove</h1>
+  <p class="intro">Accessible outings, friendly companionship and enjoyable days out.</p>
+</header>
 
-    <section aria-labelledby="outings-heading">
-      <h2 id="outings-heading">Upcoming outings</h2>
-      <p>Explore our planned outings and request a place.</p>
+<section aria-labelledby="outings-heading">
+  <h2 id="outings-heading">Upcoming outings</h2>
+  <p>Explore our planned outings and request a place.</p>
+  <div id="outings" aria-live="polite">
+    <p>Loading upcoming outings…</p>
+  </div>
+</section>
 
-      <div id="outings">
-        <p>Our upcoming outings will appear here soon.</p>
-      </div>
-    </section>
+<footer>
+  <p>AccessMove — helping you enjoy more of the places you love.</p>
+  <p class="note">Requests are subject to availability and confirmation by AccessMove.</p>
+</footer>
+</main>
 
-    <footer>
-      <p>AccessMove — helping you enjoy more of the places you love.</p>
-      <p class="note">Requests are subject to availability and confirmation by AccessMove.</p>
-    </footer>
-  </main>
+<script>
+const DATA_URL = "https://raw.githubusercontent.com/AccessMove/accessmove-outings/refs/heads/main/outings.json";
+const container = document.getElementById("outings");
+
+function safeText(value) {
+  return String(value ?? "");
+}
+
+function displayDate(value) {
+  if (!value) return "";
+  const date = new Date(value + "T12:00:00");
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric"
+      });
+}
+
+async function loadOutings() {
+  try {
+    const response = await fetch(DATA_URL + "?t=" + Date.now());
+    if (!response.ok) throw new Error("Unable to load outings");
+    const data = await response.json();
+    const outings = Array.isArray(data.outings) ? data.outings : [];
+
+    container.replaceChildren();
+
+    if (outings.length === 0) {
+      container.textContent = "There are currently no outings available. Please check back soon.";
+      return;
+    }
+
+    outings.forEach(outing => {
+      const card = document.createElement("article");
+      card.className = "outing";
+
+      const heading = document.createElement("h3");
+      heading.textContent = safeText(outing.name);
+      card.appendChild(heading);
+
+      const details = [
+        displayDate(outing.date),
+        [outing.startTime, outing.finishTime].filter(Boolean).join("–"),
+        safeText(outing.destination)
+      ].filter(Boolean);
+
+      details.forEach(detail => {
+        const p = document.createElement("p");
+        p.textContent = detail;
+        card.appendChild(p);
+      });
+
+      if (outing.description) {
+        const description = document.createElement("p");
+        description.textContent = safeText(outing.description);
+        card.appendChild(description);
+      }
+
+      if (outings.length && outing.bookingUrl) {
+        const link = document.createElement("a");
+        link.className = "request";
+        link.href = outing.bookingUrl;
+        link.textContent = "Request this outing";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        card.appendChild(link);
+      }
+
+      container.appendChild(card);
+    });
+  } catch (error) {
+    container.textContent =
+      "We're unable to load the outings programme at the moment. Please try again shortly.";
+  }
+}
+
+loadOutings();
+</script>
 </body>
 </html>
