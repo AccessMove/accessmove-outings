@@ -1,3 +1,12 @@
 {
-  "outings": []
+  "outings": [
+    {
+      "name": "TEST – Garden Centre Visit",
+      "date": "2026-11-20",
+      "startTime": "10:00",
+      "finishTime": "12:00",
+      "destination": "Test destination",
+      "description": "Temporary display test for the AccessMove outings programme."
+    }
+  ]
 }
